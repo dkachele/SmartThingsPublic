@@ -349,7 +349,7 @@ def pageStatus() {
             	if(delaylist)
                 {
                 	text += "Devices delayed:\n${delaylist.trim()}\n\n"
-                    check += "${delaylist.trim()}"
+                    check += "${delayListCheck.trim()}"
                 }
                 if (badlist)
                 {
@@ -361,6 +361,10 @@ def pageStatus() {
                 	text += "Devices with Errors:\n${errorlist.trim()}\n\n"
                     check += "${errorlist.trim()}"
                 }
+                
+                log.info "Check: ${check}"
+                log.info "lastText: ${state.lastText}"
+                log.trace "check vs. lastText"
                 
                 if(check != state.lastText)
                 {
