@@ -78,7 +78,9 @@ def pageStatus() {
 			return pageConfigure()
 	}
     
-	def goodlist = ""
+	log.trace "Checking for issues"
+    
+    def goodlist = ""
 	def badlist = ""
 	def errorlist = ""
     def delaylist = ""
@@ -387,9 +389,9 @@ def pageStatus() {
                     check += "${errorlist.trim()}"
                 }
                 
-                log.info "Check: ${check}"
-                log.info "lastText: ${state.lastText}"
-                log.trace "check vs. lastText"
+                //log.info "Check: ${check}"
+                //log.info "lastText: ${state.lastText}"
+                //log.trace "check vs. lastText"
                 
                 if(check != state.lastText)
                 {
