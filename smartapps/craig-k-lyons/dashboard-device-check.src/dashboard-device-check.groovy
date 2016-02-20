@@ -445,7 +445,6 @@ def pageConfigure() {
     	input "sendNotification", "enum", title: "Send Notification?", required: true, options: ["Yes", "No"]
         input "phoneNumber", "phone", title: "Phone number", required: false
         input "timer", "number", title: "How long (in hours) before a device is considered inactive?", required: false
-    	input "refreshTimer", "number", title: "How often (in hours) do you want to send notifications?", required: false
     }
 
 		section("Devices To Check") {
