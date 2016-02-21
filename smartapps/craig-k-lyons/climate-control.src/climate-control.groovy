@@ -70,6 +70,7 @@ def subscribeToEvents()
 def heatingSetpointHandler(evt)
 {
 	log.info "thermoHeatingSetPoint: '${thermostat.currentHeatingSetpoint}'"
+    log.info "temp-HeatingSetPoint: '${state.tempHeatSetPoint}'"
     log.info "thermoCoolingSetPoint: '${thermostat.currentCoolingSetpoint}'"
     log.info "currentTemperature: '${thermostat.currentTemperature}'"
     log.info "currentMode: '${thermostat.currentThermostatMode}'"
@@ -176,7 +177,7 @@ def checkTemp()
     	{
     		log.info "Changing Thermostat to '${sp}' because Thermostat is '${ctThermo}' and Sensor is '${ctSensor}'"
         	thermostat.setHeatingSetpoint(sp)
-        	state.tempHeatSetPoint = -99
+        	//state.tempHeatSetPoint = -99
     	}
     	else
     	{
