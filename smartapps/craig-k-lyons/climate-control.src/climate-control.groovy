@@ -60,9 +60,9 @@ def subscribeToEvents()
     subscribe(thermostat, "coolingSetpoint", heatingSetpointHandler)
     
     state.realHeatSetPoint = thermostat.currentHeatingSetpoint
-    state.tempHeatSetPoint = thermostat.currentHeatingSetpoint + 2
+    state.tempHeatSetPoint = thermostat.currentHeatingSetpoint
     state.realCoolSetPoint = thermostat.currentCoolingSetpoint
-    state.tempCoolSetPoint = thermostat.currentCoolingSetpoint - 2
+    state.tempCoolSetPoint = thermostat.currentCoolingSetpoint
     
     runIn(30,checkTemp)
 }
@@ -85,14 +85,14 @@ def heatingSetpointHandler(evt)
         state.realHeatSetPoint = thermostat.currentHeatingSetpoint
         state.tempHeatSetPoint = state.realHeatSetPoint
     }
-    if (state.tempCoolSetPoint != thermostat.currentCoolingSetpoint)
+    if (state.tempCoolSetPoint <= thermostat.currentCoolingSetpoint - 0.5 || state.tempCoolSetPoint >= thermostat.currentCoolingSetpoint + 0.5)
+    //if (state.tempCoolSetPoint != thermostat.currentCoolingSetpoint)
     {
     	log.info "IMPORTANT: Setting realCoolSetPoint: '${thermostat.currentCoolingSetpoint}'"
         state.realCoolSetPoint = thermostat.currentCoolingSetpoint
         state.tempCoolSetPoint = state.realCoolSetPoint
     }
     
-    log.trace "**** heatingSetPoint function *****"
     
     checkTemp()
     
@@ -152,7 +152,7 @@ def checkTemp()
         
         if (incrHeatSetPoint())
         {
-        	state.tempHeatSetPoint = ctThermo + 2
+        	state.tempHeatSetPoint = ctThermo + 3
             log.info "Heating Thermostat from '${sp}' to '${state.tempHeatSetPoint}' because Senors are at '${ctSensor}'"
             thermostat.setHeatingSetpoint(state.tempHeatSetPoint)
         }
@@ -173,7 +173,7 @@ def checkTemp()
         
         if (decrCoolSetPoint())
         {
-        	state.tempCoolSetPoint = ctThermo - 2
+        	state.tempCoolSetPoint = ctThermo - 3
             log.info "Cooling Thermostat from '${sp}' to '${state.tempCoolSetPoint}' because sensor is '${ctSensor}'"
             thermostat.cool()
             thermostat.setHeatingSetpoint(state.tempHeatSetPoint)
@@ -200,6 +200,14 @@ def checkTemp()
     
     //log.trace "*****check temp*******"
     //log.info " "
+    log.trace "*******End*******"
+    log.info "thermoHeatingSetPoint: '${thermostat.currentHeatingSetpoint}'"
+    log.info "temp-HeatingSetPoint: '${state.tempHeatSetPoint}'"
+    log.info "real-HeatingSetPoint: '${state.realHeatSetPoint}'"
+    log.info "thermoCoolingSetPoint: '${thermostat.currentCoolingSetpoint}'"
+    log.info "currentTemperature: '${thermostat.currentTemperature}'"
+    log.info "currentMode: '${thermostat.currentThermostatMode}'"
+    log.trace "*******End*******"
     log.trace "---       All Done       ---"
     
 }
@@ -276,7 +284,7 @@ private needCool()
 private incrHeatSetPoint()
 {
 
-	def sp = state.realHeatSetPoint
+	def sp = state.tempHeatSetPoint
 	def ctThermo = thermostat.currentTemperature
     def result = false
     
@@ -298,7 +306,7 @@ private incrHeatSetPoint()
 private decrCoolSetPoint()
 {
 
-	def sp = state.realCoolSetPoint
+	def sp = state.tempCoolSetPoint
 	def ctThermo = thermostat.currentTemperature
     def result = false
     
