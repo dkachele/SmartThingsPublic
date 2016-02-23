@@ -56,7 +56,10 @@ preferences {
 //Show Status page
 //***************************
 def pageStatus() {
-	def pageProperties = [
+	unsubscribe()
+    subscribeDevices()
+    
+    def pageProperties = [
 		name:       "pageStatus",
 		title:      "Quick Device Check",
 		nextPage:   null,
@@ -78,20 +81,51 @@ def pageStatus() {
 			return pageConfigure()
 	}
     
-	log.trace "Checking for issues"
+	return dynamicPage(pageProperties) {
+    	
+	    doCheck()
+        
     
+		if (state.goodlist) {
+			section("Devices Reporting (hrs old)") {
+				paragraph state.goodlist.trim()
+			}
+		}
+
+		if (state.badlist) {
+			section("Devices NOT Reporting Events") {
+				paragraph state.badlist.trim()
+			}
+        }
+        
+        if (state.errorlist) {
+			section("Devices with Errors") {
+				paragraph state.errorlist.trim()
+			}
+		}
+        
+        section("Menu") {
+			href "pageStatus", title:"Refresh", description:"Tap to refresh the status of devices"
+			href "pageConfigure", title:"Configure", description:"Tap to manage your list of devices"
+		}
+	}
+    
+    }
+
+def doCheck(evt){
+	doCheck()
+}
+    
+def doCheck () {
+        
+        def rightNow = new Date()
+        
     def goodlist = ""
 	def badlist = ""
 	def errorlist = ""
     def delaylist = ""
     def delayListCheck = ""
-    def thours
-	    
-	return dynamicPage(pageProperties) {
-    	def rightNow = new Date()
-		
-        
-        
+    
         settings.motiondevices.each() {
 			def lastTime = it.events(max: 1).date
 			try {
@@ -100,7 +134,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -123,7 +157,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -146,7 +180,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -169,30 +203,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
-                        delaylist += "$it.displayName ($thours)\n"
-                        delayListCheck += "$it.displayName\n"
-                    }
-                    goodlist += "$xhours: $it.displayName\n"
-				} else {
-					badlist += "$it.displayName\n"	
-				}
-
-			} catch (e) {
-					log.trace "Caught error checking a device."
-					log.trace e
-					errorlist += "$it.displayName\n"
-			}
-		}
-        settings.tempdevices.each() {
-			def lastTime = it.events(max: 1).date
-			try {
-				if (lastTime) {
-                    def hours = (((rightNow.time - lastTime.time) / 60000) / 60)
-            		def xhours = (hours.toFloat()/1).round(2)
-					
-                    if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -208,7 +219,7 @@ def pageStatus() {
 			}
 		}
         
-		settings.contactdevices.each() {
+        settings.tempdevices.each() {
 			def lastTime = it.events(max: 1).date
 			try {
 				if (lastTime) {
@@ -216,7 +227,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -231,7 +242,37 @@ def pageStatus() {
 					errorlist += "$it.displayName\n"
 			}
 		}
-		settings.lockdevices.each() {
+        
+        settings.contactdevices.each() {
+			def lastTime = it.events(max: 1).date
+			try {
+				if (lastTime) {
+                	
+                    def hours = (((rightNow.time - lastTime.time) / 60000) / 60)
+            		def xhours = (hours.toFloat()/1).round(2)
+					
+                    if (xhours > timer){
+                    	def thours = (hours.toFloat()/1).round(0)
+                        delaylist += "$it.displayName ($thours)\n"
+                        delayListCheck += "$it.displayName\n"
+
+                    }
+                    
+                    goodlist += "$xhours: $it.displayName\n"
+                    log.info "Contact State: '${state.goodlist}'"
+                    
+				} else {
+					badlist += "$it.displayName\n"	
+				}
+
+			} catch (e) {
+					log.trace "Caught error checking a device."
+					log.trace e
+					errorlist += "$it.displayName\n"
+			}
+		}
+        
+        settings.lockdevices.each() {
 			def lastTime = it.events(max: 1).date
 			try {
 				if (lastTime) {
@@ -239,10 +280,11 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
+                    
                     goodlist += "$xhours: $it.displayName\n"
 				} else {
 					badlist += "$it.displayName\n"	
@@ -262,7 +304,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -285,7 +327,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -308,7 +350,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
 					
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -331,7 +373,7 @@ def pageStatus() {
             		def xhours = (hours.toFloat()/1).round(2)
                     
                     if (xhours > timer){
-                    	thours = (hours.toFloat()/1).round(0)
+                    	def thours = (hours.toFloat()/1).round(0)
                         delaylist += "$it.displayName ($thours)\n"
                         delayListCheck += "$it.displayName\n"
                     }
@@ -346,23 +388,7 @@ def pageStatus() {
 					errorlist += "$it.displayName\n"
 			}
 		}
-		if (goodlist) {
-			section("Devices Reporting (hrs old)") {
-				paragraph goodlist.trim()
-			}
-		}
-
-		if (badlist) {
-			section("Devices NOT Reporting Events") {
-				paragraph badlist.trim()
-			}
-        }
         
-        if (errorlist) {
-			section("Devices with Errors") {
-				paragraph errorlist.trim()
-			}
-		}
         
         if ((badlist || errorlist) && sendNotification == "Yes")
         {
@@ -385,7 +411,7 @@ def pageStatus() {
                 }
               	if (errorlist)
                 {
-                	text += "Devices with Errors:\n${errorlist.trim()}\n\n"
+                	text += "Devices with Errors:\n${state.errorlist.trim()}\n\n"
                     check += "${errorlist.trim()}"
                 }
                 
@@ -404,12 +430,13 @@ def pageStatus() {
                 }
             
         }
-
-		section("Menu") {
-			href "pageStatus", title:"Refresh", description:"Tap to refresh the status of devices"
-			href "pageConfigure", title:"Configure", description:"Tap to manage your list of devices"
-		}
-	}
+        
+    state.goodlist = goodlist
+    state.badlist = badlist
+	state.errorlist = errorlist
+    state.delaylist = delaylist
+    state.delayListCheck = delayListCheck
+        
 }
 
 //***************************
@@ -477,6 +504,26 @@ def updated() {
 
 def initialize() {
 	log.trace "Launching Quick Device Check"
+    subscribeDevices()
+}
+
+def subscribeDevices(){
+
+	log.trace "subscribing to Devices"
+    subscribe(motiondevices, "motion", doCheck)
+    subscribe(humiditydevices, "relativeHumidity", doCheck)
+    subscribe(leakdevices, "water", doCheck)
+    subscribe(thermodevices, "Temperature", doCheck)
+    subscribe(thermodevices, "heatingSetpoint", doCheck)
+    subscribe(thermodevices, "coolingSetpoint", doCheck)
+    subscribe(tempdevices, "temperature", doCheck)
+    subscribe(contactdevices, "contact", doCheck)
+    subscribe(lockdevices, "lock", doCheck)
+    subscribe(alarmdevices, "alarm", doCheck)
+    subscribe(switchdevices, "switch", doCheck)
+    subscribe(presencedevices, "presence", doCheck)
+    subscribe(smokedevices, "smokeDetector", doCheck)
+    
 }
 
 def send(text) {
