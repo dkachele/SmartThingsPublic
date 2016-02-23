@@ -59,7 +59,7 @@ def pageStatus() {
 	unsubscribe()
     subscribeDevices()
     
-    RunIn(60*30, pageStatus)
+    runIn(60*5, pageStatus)
     
     def pageProperties = [
 		name:       "pageStatus",
