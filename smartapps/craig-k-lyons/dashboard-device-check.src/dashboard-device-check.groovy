@@ -59,6 +59,8 @@ def pageStatus() {
 	unsubscribe()
     subscribeDevices()
     
+    RunIn(60*30, pageStatus)
+    
     def pageProperties = [
 		name:       "pageStatus",
 		title:      "Quick Device Check",
