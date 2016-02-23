@@ -69,24 +69,30 @@ def subscribeToEvents()
 
 def heatingSetpointHandler(evt)
 {
-	log.info "thermoHeatingSetPoint: '${thermostat.currentHeatingSetpoint}'"
+	log.trace "**************"
+    log.info "thermoHeatingSetPoint: '${thermostat.currentHeatingSetpoint}'"
     log.info "temp-HeatingSetPoint: '${state.tempHeatSetPoint}'"
+    log.info "real-HeatingSetPoint: '${state.realHeatSetPoint}'"
     log.info "thermoCoolingSetPoint: '${thermostat.currentCoolingSetpoint}'"
     log.info "currentTemperature: '${thermostat.currentTemperature}'"
     log.info "currentMode: '${thermostat.currentThermostatMode}'"
-    log.trace "heatingSetPoint"
-	
+    log.trace "----------------"
     
-    if (state.tempHeatSetPoint != thermostat.currentHeatingSetpoint)
+    
+    if (state.tempHeatSetPoint <= thermostat.currentHeatingSetpoint - 0.5 || state.tempHeatSetPoint >= thermostat.currentHeatingSetpoint + 0.5)
     {
-    	log.trace "Setting realHeatSetPoint: '${thermostat.currentHeatingSetpoint}'"
+    	log.info "IMPORTANT: Setting realHeatSetPoint: '${thermostat.currentHeatingSetpoint}'"
         state.realHeatSetPoint = thermostat.currentHeatingSetpoint
+        state.tempHeatSetPoint = state.realHeatSetPoint
     }
     if (state.tempCoolSetPoint != thermostat.currentCoolingSetpoint)
     {
-    	log.trace "Setting realCoolSetPoint: '${thermostat.currentCoolingSetpoint}'"
+    	log.info "IMPORTANT: Setting realCoolSetPoint: '${thermostat.currentCoolingSetpoint}'"
         state.realCoolSetPoint = thermostat.currentCoolingSetpoint
+        state.tempCoolSetPoint = state.realCoolSetPoint
     }
+    
+    log.trace "**** heatingSetPoint function *****"
     
     checkTemp()
     
@@ -109,8 +115,8 @@ private sensorAverage ()
     
     def temp = state.totalSensor / state.numSensor
     
-    log.info "Avg Temp: ${temp}"
-    log.trace "Determining Sensor Average Temperature"
+    //log.info "Avg Temp: ${temp}"
+    //log.trace "Determining Sensor Average Temperature"
     
     return temp
 }
@@ -123,8 +129,15 @@ def checkTemp()
         state.totalSensor = 0
 		//def ctSensor = sensor.currentTemperature
         def ctSensor = sensorAverage()
-        def sp = ctThemro
+        def sp = ctThermo
         
+        //log.trace "********************"
+        //log.info "tm:[${tm}]"
+        //log.info "ctThermo:[${ctThermo}]"
+        //log.info "ctSensor:[${ctSensor}]"
+        //log.info "sp:[${sp}]"
+        //log.trace "--------------------"
+              
     //sp = state.realCoolSetPoint
     
     if (needHeat())
@@ -140,7 +153,7 @@ def checkTemp()
         if (incrHeatSetPoint())
         {
         	state.tempHeatSetPoint = ctThermo + 2
-            log.info "Heating Thermostat from '${sp}' to '${state.tempHeatSetPoint}' because sensor is '${ctSensor}'"
+            log.info "Heating Thermostat from '${sp}' to '${state.tempHeatSetPoint}' because Senors are at '${ctSensor}'"
             thermostat.setHeatingSetpoint(state.tempHeatSetPoint)
         }
         else
@@ -184,6 +197,11 @@ def checkTemp()
     		log.info "Everything is correct"
     	}
     }
+    
+    //log.trace "*****check temp*******"
+    //log.info " "
+    log.trace "---       All Done       ---"
+    
 }
 
 private thermoNotRight()
@@ -196,10 +214,15 @@ private thermoNotRight()
     	result = true
     }
     
-    log.info "Mode: ${thermostat.currentThermostatMode}"
-    log.info "[ RETURN: '${result}' ] -- ${state.realHeatSetPoint} != ${thermostat.currentHeatingSetpoint}"
-    log.info "[ RETURN: '${result}' ] -- ${state.realCoolSetPoint} != ${thermostat.currentCoolingSetpoint}"
-    log.trace "thermoNotRight"
+    //log.trace "*****************"
+    //log.info "Mode: ${thermostat.currentThermostatMode}"
+    if (tm in ["heat","emergency heat"]){
+    //	log.info "[ RETURN: '${result}' ] -- ${state.realHeatSetPoint} != ${thermostat.currentHeatingSetpoint}"
+    }
+    else {
+    //	log.info "[ RETURN: '${result}' ] -- ${state.realCoolSetPoint} != ${thermostat.currentCoolingSetpoint}"
+    }
+    //log.trace "********  thermoNotRight *******"
         
     return result
 }
@@ -213,6 +236,7 @@ private needHeat()
         def ctSensor = sensorAverage()
         def sp = state.realHeatSetPoint
         def result=false
+        def ctSensorDisplay = (ctSensor.toFloat()/1).round(2)
         
         // sensor + threshold less than desired Temp
         if ((ctSensor + tempThreshold) < sp)
@@ -220,7 +244,7 @@ private needHeat()
         	result = true
         }
         
-        log.info "[ RETURN: '${result}' ] -- ${ctSensor} + ${tempThreshold} ('${ctSensor + tempThreshold}')< ${sp}"
+        log.info "[ RETURN: '${result}' ] -- ${ctSensorDisplay} + ${tempThreshold} ('${ctSensorDisplay + tempThreshold}')< ${sp}"
         log.trace "checking if we Need Heat"
                 
         return result
@@ -235,6 +259,7 @@ private needCool()
         def ctSensor = sensorAverage()
         def sp = state.realCoolSetPoint
         def result=false
+        def ctSensorDisplay = (ctSensor.toFloat()/1).round(2)
         
         // sensor - threshold greater than desired Temp
         if ((ctSensor - tempThreshold) > sp)
@@ -242,7 +267,7 @@ private needCool()
         	result = true
         }
         
-        log.info "[ RETURN: '${result}' ] -- ${ctSensor} - ${tempThreshold} ('${ctSensor - tempThreshold}')> ${sp}"
+        log.info "[ RETURN: '${result}' ] -- ${ctSensorDisplay} - ${tempThreshold} ('${ctSensorDisplay - tempThreshold}')> ${sp}"
         log.trace "checking if we need Cooling"
                 
         return result
