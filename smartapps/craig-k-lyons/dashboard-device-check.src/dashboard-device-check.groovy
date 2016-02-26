@@ -85,34 +85,41 @@ def pageStatus() {
     
 	return dynamicPage(pageProperties) {
     	
-	    doCheck()
+	    if(!state.checkRunning)
+        {
+        	state.checkRunning = true
+            
+            doCheck()
         
     
-		if (state.goodlist) {
-			section("Devices Reporting (hrs old)") {
-				paragraph state.goodlist.trim()
-			}
-		}
+            if (state.goodlist) {
+                section("Devices Reporting (hrs old)") {
+                    paragraph state.goodlist.trim()
+                }
+            }
 
-		if (state.badlist) {
-			section("Devices NOT Reporting Events") {
-				paragraph state.badlist.trim()
-			}
-        }
-        
-        if (state.errorlist) {
-			section("Devices with Errors") {
-				paragraph state.errorlist.trim()
-			}
-		}
-        
-        section("Menu") {
-			href "pageStatus", title:"Refresh", description:"Tap to refresh the status of devices"
-			href "pageConfigure", title:"Configure", description:"Tap to manage your list of devices"
-		}
-	}
-    
-    }
+            if (state.badlist) {
+                section("Devices NOT Reporting Events") {
+                    paragraph state.badlist.trim()
+                }
+            }
+
+            if (state.errorlist) {
+                section("Devices with Errors") {
+                    paragraph state.errorlist.trim()
+                }
+            }
+
+            section("Menu") {
+                href "pageStatus", title:"Refresh", description:"Tap to refresh the status of devices"
+                href "pageConfigure", title:"Configure", description:"Tap to manage your list of devices"
+            }
+        	
+            state.checkRunning = false
+            
+       	}
+	}    
+}
 
 def doCheck(evt){
 	doCheck()
@@ -421,14 +428,17 @@ def doCheck () {
                 //log.info "lastText: ${state.lastText}"
                 //log.trace "check vs. lastText"
                 
-                if(check != state.lastText)
+                if(sendNotification == 'Yes')
                 {
-					state.lastText = check
-                    send(text)
-                }
-                else
-                {
-                	log.trace "Same error message already sent"
+                    if(check != state.lastText)
+                    {
+                        state.lastText = check
+                        send(text)
+                    }
+                    else
+                    {
+                        log.trace "Same error message already sent"
+                    }
                 }
             
         }
@@ -505,6 +515,7 @@ def updated() {
 }
 
 def initialize() {
+	state.checkRunning = false
 	log.trace "Launching Quick Device Check"
     subscribeDevices()
 }
@@ -529,11 +540,12 @@ def subscribeDevices(){
 }
 
 def send(text) {
+    sendPush(text)
     if (phoneNumber == null) {
-    	sendPush(text)
+    	
     }
     else {
-        sendPush(text)
+        
         sendSms(phoneNumber, text) 
     }
 }
