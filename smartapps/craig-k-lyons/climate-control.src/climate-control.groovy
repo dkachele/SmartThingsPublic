@@ -54,10 +54,10 @@ def updated()
 def subscribeToEvents()
 {
 	subscribe(sensor, "Temperature", sensorHandler)
-	subscribe(thermostat, "temperature",     heatingSetpointHandler)
-	subscribe(thermostat, "thermostatMode",  heatingSetpointHandler)
-    subscribe(thermostat, "heatingSetpoint", heatingSetpointHandler)
-    subscribe(thermostat, "coolingSetpoint", heatingSetpointHandler)
+	subscribe(thermostat, "temperature",     checkTemp)
+	subscribe(thermostat, "thermostatMode",  checkTemp)
+    subscribe(thermostat, "heatingSetpoint", SetpointHandler)
+    subscribe(thermostat, "coolingSetpoint", SetpointHandler)
     
     state.realHeatSetPoint = thermostat.currentHeatingSetpoint
     state.tempHeatSetPoint = thermostat.currentHeatingSetpoint
@@ -67,9 +67,9 @@ def subscribeToEvents()
     runIn(30,checkTemp)
 }
 
-def heatingSetpointHandler(evt)
+def SetpointHandler(evt)
 {
-	log.trace "**************"
+	log.trace "****** Start ********"
     log.info "thermoHeatingSetPoint: '${thermostat.currentHeatingSetpoint}'"
     log.info "temp-HeatingSetPoint: '${state.tempHeatSetPoint}'"
     log.info "real-HeatingSetPoint: '${state.realHeatSetPoint}'"
@@ -78,10 +78,13 @@ def heatingSetpointHandler(evt)
     log.info "currentMode: '${thermostat.currentThermostatMode}'"
     log.trace "----------------"
     
-    
+    log.info "####################"
     if (state.tempHeatSetPoint <= thermostat.currentHeatingSetpoint - 0.5 || state.tempHeatSetPoint >= thermostat.currentHeatingSetpoint + 0.5)
     {
     	log.info "IMPORTANT: Setting realHeatSetPoint: '${thermostat.currentHeatingSetpoint}'"
+        log.info "'${state.tempHeatSetPoint}' <= '${thermostat.currentHeatingSetpoint - 0.5}'"
+        log.info "'${state.tempHeatSetPoint}' >= '${thermostat.currentHeatingSetpoint + 0.5}'"
+        log.trace "Setting Heat"
         state.realHeatSetPoint = thermostat.currentHeatingSetpoint
         state.tempHeatSetPoint = state.realHeatSetPoint
     }
@@ -92,7 +95,7 @@ def heatingSetpointHandler(evt)
         state.realCoolSetPoint = thermostat.currentCoolingSetpoint
         state.tempCoolSetPoint = state.realCoolSetPoint
     }
-    
+    log.info "####################"
     
     checkTemp()
     
@@ -123,7 +126,9 @@ private sensorAverage ()
 
 def checkTemp()
 {
-	   	def tm = thermostat.currentThermostatMode
+	   	runIn(60,checkTemp)
+        
+        def tm = thermostat.currentThermostatMode
 		def ctThermo = thermostat.currentTemperature
         state.numSensor = 0
         state.totalSensor = 0
@@ -131,7 +136,7 @@ def checkTemp()
         def ctSensor = sensorAverage()
         def sp = ctThermo
         
-        //log.trace "********************"
+        //log.trace "******************"
         //log.info "tm:[${tm}]"
         //log.info "ctThermo:[${ctThermo}]"
         //log.info "ctSensor:[${ctSensor}]"
@@ -188,10 +193,23 @@ def checkTemp()
     {
     	if (thermoNotRight()) 
     	{
-    		log.info "Changing Thermostat to '${sp}' because Thermostat is '${ctThermo}' and Sensor is '${ctSensor}'"
-        	thermostat.setHeatingSetpoint(sp)
-        	//state.tempHeatSetPoint = -99
-    	}
+    		if (tm in ["heat","emergency heat","auto"])
+        	{
+            	log.info "Changing Thermostat to '${state.realHeatSetPoint}' because Thermostat is '${ctThermo}' and Sensor is '${ctSensor}'"
+        		thermostat.setHeatingSetpoint(state.realHeatSetPoint)
+                state.tempHeatSetPoint = state.realHeatSetPoint
+            }
+            else
+            {
+            	log.info "Changing Thermostat to '${state.realCoolSetPoint}' because Thermostat is '${ctThermo}' and Sensor is '${ctSensor}'"
+        		thermostat.setCoolingSetpoint(state.realCoolSetPoint)
+                state.tempCoolSetPoint = state.realCoolSetPoint
+        	
+            }
+                
+            //state.tempHeatSetPoint = -99
+            
+        }
     	else
     	{
     		log.info "Everything is correct"
@@ -200,7 +218,7 @@ def checkTemp()
     
     //log.trace "*****check temp*******"
     //log.info " "
-    log.trace "*******End*******"
+    log.trace "*******End Notes*******"
     log.info "thermoHeatingSetPoint: '${thermostat.currentHeatingSetpoint}'"
     log.info "temp-HeatingSetPoint: '${state.tempHeatSetPoint}'"
     log.info "real-HeatingSetPoint: '${state.realHeatSetPoint}'"
