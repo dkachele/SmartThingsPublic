@@ -54,8 +54,8 @@ def updated()
 def subscribeToEvents()
 {
 	subscribe(sensor, "Temperature", sensorHandler)
-	subscribe(thermostat, "temperature",     checkTemp)
-	subscribe(thermostat, "thermostatMode",  checkTemp)
+	subscribe(thermostat, "temperature",     sensorHandler)
+	subscribe(thermostat, "thermostatMode",  sensorHandler)
     subscribe(thermostat, "heatingSetpoint", SetpointHandler)
     subscribe(thermostat, "coolingSetpoint", SetpointHandler)
     
@@ -69,36 +69,36 @@ def subscribeToEvents()
 
 def SetpointHandler(evt)
 {
-	log.trace "****** Start ********"
-    log.info "thermoHeatingSetPoint: '${thermostat.currentHeatingSetpoint}'"
-    log.info "temp-HeatingSetPoint: '${state.tempHeatSetPoint}'"
-    log.info "real-HeatingSetPoint: '${state.realHeatSetPoint}'"
-    log.info "thermoCoolingSetPoint: '${thermostat.currentCoolingSetpoint}'"
-    log.info "currentTemperature: '${thermostat.currentTemperature}'"
-    log.info "currentMode: '${thermostat.currentThermostatMode}'"
-    log.trace "----------------"
-    
-    log.info "####################"
-    if (state.tempHeatSetPoint <= thermostat.currentHeatingSetpoint - 0.5 || state.tempHeatSetPoint >= thermostat.currentHeatingSetpoint + 0.5)
-    {
-    	log.info "IMPORTANT: Setting realHeatSetPoint: '${thermostat.currentHeatingSetpoint}'"
-        log.info "'${state.tempHeatSetPoint}' <= '${thermostat.currentHeatingSetpoint - 0.5}'"
-        log.info "'${state.tempHeatSetPoint}' >= '${thermostat.currentHeatingSetpoint + 0.5}'"
-        log.trace "Setting Heat"
-        state.realHeatSetPoint = thermostat.currentHeatingSetpoint
-        state.tempHeatSetPoint = state.realHeatSetPoint
-    }
-    if (state.tempCoolSetPoint <= thermostat.currentCoolingSetpoint - 0.5 || state.tempCoolSetPoint >= thermostat.currentCoolingSetpoint + 0.5)
-    //if (state.tempCoolSetPoint != thermostat.currentCoolingSetpoint)
-    {
-    	log.info "IMPORTANT: Setting realCoolSetPoint: '${thermostat.currentCoolingSetpoint}'"
-        state.realCoolSetPoint = thermostat.currentCoolingSetpoint
-        state.tempCoolSetPoint = state.realCoolSetPoint
-    }
-    log.info "####################"
-    
-    checkTemp()
-    
+		log.trace "****** Start ********"
+        log.info "thermoHeatingSetPoint: '${thermostat.currentHeatingSetpoint}'"
+        log.info "temp-HeatingSetPoint: '${state.tempHeatSetPoint}'"
+        log.info "real-HeatingSetPoint: '${state.realHeatSetPoint}'"
+        log.info "thermoCoolingSetPoint: '${thermostat.currentCoolingSetpoint}'"
+        log.info "currentTemperature: '${thermostat.currentTemperature}'"
+        log.info "currentMode: '${thermostat.currentThermostatMode}'"
+        log.trace "----------------"
+
+        log.info "####################"
+        if (state.tempHeatSetPoint <= thermostat.currentHeatingSetpoint - 0.5 || state.tempHeatSetPoint >= thermostat.currentHeatingSetpoint + 0.5)
+        {
+            log.info "IMPORTANT: Setting realHeatSetPoint: '${thermostat.currentHeatingSetpoint}'"
+            log.info "'${state.tempHeatSetPoint}' <= '${thermostat.currentHeatingSetpoint - 0.5}'"
+            log.info "'${state.tempHeatSetPoint}' >= '${thermostat.currentHeatingSetpoint + 0.5}'"
+            log.trace "Setting Heat"
+            state.realHeatSetPoint = thermostat.currentHeatingSetpoint
+            state.tempHeatSetPoint = state.realHeatSetPoint
+        }
+        if (state.tempCoolSetPoint <= thermostat.currentCoolingSetpoint - 0.5 || state.tempCoolSetPoint >= thermostat.currentCoolingSetpoint + 0.5)
+        //if (state.tempCoolSetPoint != thermostat.currentCoolingSetpoint)
+        {
+            log.info "IMPORTANT: Setting realCoolSetPoint: '${thermostat.currentCoolingSetpoint}'"
+            state.realCoolSetPoint = thermostat.currentCoolingSetpoint
+            state.tempCoolSetPoint = state.realCoolSetPoint
+        }
+        log.info "####################"
+
+       runIn(10,checkTemp)
+       
 }
 
 def sensorHandler(evt)
@@ -124,9 +124,20 @@ private sensorAverage ()
     return temp
 }
 
+def changeTemp()
+{
+	if (thermostat.currentThermostatMode == 'heat'){
+    	thermostat.setHeatingSetpoint(state.tempHeatSetPoint)
+    }
+    else{
+    	thermostat.setHeatingSetpoint(state.tempCoolSetPoint)
+    }
+}
 def checkTemp()
 {
-	   	runIn(60,checkTemp)
+	   	//log.trace "********Start checkTemp**********"
+        runIn(60,checkTemp)
+        //log.trace "******* Done Scheduling ***********"
         
         def tm = thermostat.currentThermostatMode
 		def ctThermo = thermostat.currentTemperature
@@ -136,7 +147,7 @@ def checkTemp()
         def ctSensor = sensorAverage()
         def sp = ctThermo
         
-        //log.trace "******************"
+        log.trace "******************"
         //log.info "tm:[${tm}]"
         //log.info "ctThermo:[${ctThermo}]"
         //log.info "ctSensor:[${ctSensor}]"
@@ -158,8 +169,9 @@ def checkTemp()
         if (incrHeatSetPoint())
         {
         	state.tempHeatSetPoint = ctThermo + 3
+            runIn(5,changeTemp)
             log.info "Heating Thermostat from '${sp}' to '${state.tempHeatSetPoint}' because Senors are at '${ctSensor}'"
-            thermostat.setHeatingSetpoint(state.tempHeatSetPoint)
+            
         }
         else
         {
@@ -179,9 +191,8 @@ def checkTemp()
         if (decrCoolSetPoint())
         {
         	state.tempCoolSetPoint = ctThermo - 3
+            runIn(5,changeTemp)
             log.info "Cooling Thermostat from '${sp}' to '${state.tempCoolSetPoint}' because sensor is '${ctSensor}'"
-            thermostat.cool()
-            thermostat.setHeatingSetpoint(state.tempHeatSetPoint)
         }
         else
         {
@@ -262,7 +273,7 @@ private needHeat()
         def ctSensor = sensorAverage()
         def sp = state.realHeatSetPoint
         def result=false
-        def ctSensorDisplay = (ctSensor.toFloat()/1).round(2)
+        def ctSensorDisplay = (ctSensor.toFloat()/1.0).round(2)
         
         // sensor + threshold less than desired Temp
         if ((ctSensor + tempThreshold) < sp)
@@ -285,7 +296,7 @@ private needCool()
         def ctSensor = sensorAverage()
         def sp = state.realCoolSetPoint
         def result=false
-        def ctSensorDisplay = (ctSensor.toFloat()/1).round(2)
+        def ctSensorDisplay = (ctSensor.toFloat()/1.0).round(2)
         
         // sensor - threshold greater than desired Temp
         if ((ctSensor - tempThreshold) > sp)
@@ -308,13 +319,13 @@ private incrHeatSetPoint()
     
     
 		
-    if (ctThermo >= sp)
+    if (ctThermo + 2 >= sp)
     {
     	result = true
     }
 
 
-	log.info "[ RETURN: '${result}' ] -- ${ctThermo} >= ${sp}"
+	log.info "[ RETURN: '${result}' ] -- ${ctThermo} + 2 (${ctThermo + 2}) >= ${sp}"
     log.trace "checking if we Need to increase heat"
     
     return result
@@ -330,13 +341,13 @@ private decrCoolSetPoint()
     
     
 		
-    if (ctThermo <= sp)
+    if (ctThermo - 2 <= sp)
     {
     	result = true
     }
 
 
-	log.info "[ RETURN: '${result}' ] -- ${ctThermo} <= ${sp}"
+	log.info "[ RETURN: '${result}' ] -- ${ctThermo} - 2 (${ctThermo - 2}) <= ${sp}"
     log.trace "checking if we need to increase AC"
     
     
